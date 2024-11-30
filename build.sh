@@ -10,7 +10,3 @@ sed -i 's/<color name="fx_mobile_layer_color_2">.*/<color name="fx_mobile_layer_
 
 # Rebuild the APK
 apktool b patched -o patched.apk --use-aapt2
-
-# Align the APK
-zipalign 4 patched.apk patched_signed.apk
-rm -rf patched patched.apk
