@@ -13,7 +13,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y jq wget zipalign openjdk-11-jdk apksigner
+          sudo apt install -y jq wget zipalign openjdk-11-jdk
 
       - name: Check out repository code
         uses: actions/checkout@v3
@@ -21,12 +21,18 @@ jobs:
       - name: Download Iceraven APK
         run: wget -O latest.apk https://github.com/fork-maintainers/iceraven-browser/releases/download/iceraven-2.26.0/iceraven-2.26.0-browser-arm64-v8a-forkRelease.apk
 
+      - name: Download apksigner
+        run: |
+          wget -O apksigner.zip https://dl.google.com/android/repository/build-tools_r33.0.2-linux.zip
+          unzip apksigner.zip -d apksigner
+          chmod +x apksigner/build-tools/33.0.2/apksigner
+
       - name: Run build script and sign apk
         run: |
           chmod +x ./build.sh
           ./build.sh
           echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
-          apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} patched_signed.apk
+          ./apksigner/build-tools/33.0.2/apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} patched_signed.apk
       
       - name: Publish release
         uses: softprops/action-gh-release@v1
