@@ -1,0 +1,30 @@
+name: build apk
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '00 0 * * *'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y wget apktool zipalign apksigner
+
+      - name: Check out repository code
+        uses: actions/checkout@v3
+
+      - name: Run build script and sign apk
+        run: |
+          cd ${{ github.workspace }}
+          chmod +x ./build.sh
+          ./build.sh
+          echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
+          apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} patched_signed.apk
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: iceraven-2.26.0
+          files: ${{ github.workspace }}/patched_signed.apk
