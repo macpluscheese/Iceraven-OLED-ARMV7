@@ -16,7 +16,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          tag: 'iceraven-2.26.0' # Manually specify the tag name
+          latest: true
 
       - name: Install dependencies
         run: |
@@ -38,7 +38,7 @@ jobs:
           ./build.sh
           echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
           apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} patched_signed.apk
-      
+
       - name: Publish release
         uses: softprops/action-gh-release@v1
         with:
