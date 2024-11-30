@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Fetch the latest Iceraven APK
+wget -q https://github.com/fork-maintainers/iceraven-browser/releases/download/iceraven-2.26.0/iceraven-2.26.0-browser-arm64-v8a-forkRelease.apk -O latest.apk
+
 # Download apktool
 wget -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.8.1.jar -O apktool.jar
 wget -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool
