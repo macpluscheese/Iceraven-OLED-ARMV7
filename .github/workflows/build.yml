@@ -25,6 +25,9 @@ jobs:
     - name: Download Iceraven APK
       run: wget -O iceraven.apk https://github.com/fork-maintainers/iceraven-browser/releases/download/iceraven-2.26.0/iceraven-2.26.0-browser-arm64-v8a-forkRelease.apk
 
+    - name: Make build.sh executable
+      run: chmod +x build.sh
+
     - name: Run build script
       run: ./build.sh
       env:
