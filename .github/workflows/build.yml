@@ -1,42 +1,50 @@
 name: Build and Modify APK
 
-on: [push]
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '00 0 * * *'
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Get latest release info
+        id: getLatest
+        uses: cardinalby/git-get-release-action@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          latest: true
+      
+      - name: Install dependencies
+        run: |
+            sudo apt update
+            sudo apt install -y jq wget zipalign openjdk-11-jdk
+      
+      - name: Get latest Iceraven release version
+        run: |
+          echo "BUILD_VERSION=2.26.0" >> $GITHUB_ENV
+      
+      - name: Check if latest version was already built
+        if: ${{ steps.getLatest.outputs.tag_name == env.BUILD_VERSION }}
+        run: |
+          echo latest version already built and released
+          exit -1
+      
+      - name: Check out repository code
+        uses: actions/checkout@v3
 
-    - name: Set up JDK 11
-      uses: actions/setup-java@v3
-      with:
-        java-version: 11
-        distribution: 'adopt' # Using AdoptOpenJDK which is commonly used and should work fine
-
-    - name: Install apktool
-      run: sudo apt-get install -y apktool
-
-    - name: Install apksigner
-      run: sudo apt-get install -y apksigner
-
-    - name: Download Iceraven APK
-      run: wget -O iceraven.apk https://github.com/fork-maintainers/iceraven-browser/releases/download/iceraven-2.26.0/iceraven-2.26.0-browser-arm64-v8a-forkRelease.apk
-
-    - name: Make build.sh executable
-      run: chmod +x build.sh
-
-    - name: Run build script
-      run: ./build.sh
-      env:
-        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
-        KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
-
-    - name: Upload signed APK
-      uses: actions/upload-artifact@v3
-      with:
-        name: iceraven-signed
-        path: iceraven-signed.apk
+      - name: Run build script and sign apk
+        run: |
+          chmod +x ./build.sh
+          ./build.sh
+          echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
+          apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} patched_signed.apk
+      
+      - name: Publish release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.BUILD_VERSION }}
+          files: patched_signed.apk
