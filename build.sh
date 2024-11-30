@@ -22,7 +22,7 @@ java -jar apktool.jar b patched -o patched.apk --use-aapt2
 zipalign 4 patched.apk patched_signed.apk
 
 # Sign the APK
-apksigner sign --ks keystore.jks --ks-pass pass:"${KEYSTORE_PASSPHRASE}" patched_signed.apk
+./apksigner sign --ks keystore.jks --ks-pass pass:"${KEYSTORE_PASSPHRASE}" patched_signed.apk
 
 # Clean up
 rm -rf patched patched.apk
