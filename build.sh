@@ -1,31 +1,26 @@
 #!/bin/bash
 set -e
 
-# Decompile APK
-apktool d iceraven.apk -o iceraven-decompiled
+# Fetch the latest Iceraven APK
+wget -q https://github.com/fork-maintainers/iceraven-browser/releases/download/iceraven-2.26.0/iceraven-2.26.0-browser-arm64-v8a-forkRelease.apk -O latest.apk
 
-# Rename the problematic directory
-mv iceraven-decompiled/res/navigation iceraven-decompiled/res/navigation_fixed
+# Download apktool
+wget -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.8.1.jar -O apktool.jar
+wget -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool
+chmod +x apktool*
 
-# Navigate to the res/values-night directory and edit colors.xml
-cd iceraven-decompiled/res/values-night
-sed -i 's/<color name="fx_mobile_layer_color_1">.*/<color name="fx_mobile_layer_color_1">@color\/photonBlack<\/color>/g' colors.xml
-sed -i 's/<color name="fx_mobile_layer_color_2">.*/<color name="fx_mobile_layer_color_2">@color\/photonDarkGrey90<\/color>/g' colors.xml
-cd ../../..
+# Clean up any previous builds
+rm -rf patched patched_signed.apk
+java -jar apktool.jar d -s latest.apk -o patched 
+rm -rf patched/META-INF
 
-# Rename the directory back to its original name
-mv iceraven-decompiled/res/navigation_fixed iceraven-decompiled/res/navigation
+# Modify colors.xml
+sed -i 's/<color name="fx_mobile_layer_color_1">.*/<color name="fx_mobile_layer_color_1">@color\/photonBlack<\/color>/g' patched/res/values-night/colors.xml
+sed -i 's/<color name="fx_mobile_layer_color_2">.*/<color name="fx_mobile_layer_color_2">@color\/photonDarkGrey90<\/color>/g' patched/res/values-night/colors.xml
 
 # Recompile the APK
-apktool b iceraven-decompiled -o iceraven-modified.apk
+java -jar apktool.jar b patched -o patched.apk --use-aapt2
 
-# Create a temporary directory to store the keystore file
-mkdir keystore
-echo "$KEYSTORE_FILE" | base64 --decode > keystore/my-release-key.jks
-
-# Sign the APK
-apksigner sign --ks keystore/my-release-key.jks --ks-key-alias "$KEYSTORE_ALIAS" --ks-pass env:KEYSTORE_PASSWORD --out iceraven-signed.apk iceraven-modified.apk
-
-# Clean up
-rm -rf keystore
-rm -rf iceraven-decompiled
+# Align and clean up
+zipalign 4 patched.apk patched_signed.apk
+rm -rf patched patched.apk
