@@ -1,9 +1,9 @@
-name: Build and Sign IceRaven APK
+name: Build IceRaven APK
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '00 0 * * *'
 
 jobs:
   build:
@@ -15,7 +15,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y wget apktool zipalign apksigner
+          sudo apt install -y wget apktool zipalign
 
       - name: Download IceRaven APK
         run: |
@@ -27,13 +27,8 @@ jobs:
           chmod +x ./build.sh
           ./build.sh
 
-      - name: Sign APK
-        run: |
-          echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
-          apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} patched_signed.apk
-
       - name: Publish release (optional)
         uses: softprops/action-gh-release@v1
         with:
           tag_name: iceraven-2.26.0-patched
-          files: patched_signed.apk
+          files: patched.apk
