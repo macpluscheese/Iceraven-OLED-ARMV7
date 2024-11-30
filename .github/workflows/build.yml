@@ -1,40 +1,42 @@
-name: build apk
-on:
-  workflow_dispatch:
-  schedule:
-    - cron: '00 0 * * *'
+name: Build and Modify APK
+
+on: [push]
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Get latest release info
-        id: getLatest
-        uses: cardinalby/git-get-release-action@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          latest: true
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y jq
-      - name: Get latest IceRaven release version
-        run: |
-          echo "BUILD_VERSION=$(curl -s https://github.com/fork-maintainers/iceraven-browser/releases/latest | grep -o 'tag/iceraven-[^"]*' | head -n 1 | cut -d/ -f2 | sed 's/iceraven-//')" >> $GITHUB_ENV
-      - name: Check if latest version was already built
-        if: ${{ steps.getLatest.outputs.tag_name == env.BUILD_VERSION }}
-        run: |
-          echo latest version already built and released
-          exit -1
-      - name: Install build dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y wget apktool zipalign
-      - name: Check out repository code
-        uses: actions/checkout@v3
-      - name: Run build script
-        run: |
-          cd ${{ github.workspace }}
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up JDK 11
+      uses: actions/setup-java@v1
+      with:
+        java-version: 11
+
+    - name: Install apktool
+      run: sudo apt-get install -y apktool
+
+    - name: Install apksigner
+      run: sudo apt-get install -y apksigner
+
+    - name: Download Iceraven APK
+      run: wget -O iceraven.apk https://github.com/fork-maintainers/iceraven-browser/releases/download/iceraven-2.26.0/iceraven-2.26.0-browser-arm64-v8a-forkRelease.apk
+
+    - name: Run build script
+      run: ./build.sh
+      env:
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+        KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
+
+    - name: Upload signed APK
+      uses: actions/upload-artifact@v2
+      with:
+        name: iceraven-signed
+        path: iceraven-signed.apk
+         cd ${{ github.workspace }}
           chmod +x ./build.sh
           ./build.sh
       - name: Publish release
