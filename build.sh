@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Define the path to the aapt binary
+AAPT_PATH=$(which aapt)
+
 # Decompile APK
 apktool d iceraven.apk -o iceraven-decompiled
 
