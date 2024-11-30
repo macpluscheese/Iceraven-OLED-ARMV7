@@ -1,30 +1,39 @@
-name: build apk
+name: Build and Sign IceRaven APK
+
 on:
   workflow_dispatch:
   schedule:
-    - cron: '00 0 * * *'
+    - cron: '0 0 * * *'
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y wget apktool zipalign apksigner
 
-      - name: Check out repository code
-        uses: actions/checkout@v3
-
-      - name: Run build script and sign apk
+      - name: Download IceRaven APK
         run: |
-          cd ${{ github.workspace }}
+          wget https://github.com/fork-maintainers/iceraven-browser/releases/download/iceraven-2.26.0/iceraven-2.26.0-browser-arm64-v8a-forkRelease.apk \
+            -O iceraven.apk
+
+      - name: Run build script
+        run: |
           chmod +x ./build.sh
           ./build.sh
+
+      - name: Sign APK
+        run: |
           echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
           apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} patched_signed.apk
 
-      - name: Publish release
+      - name: Publish release (optional)
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: iceraven-2.26.0
-          files: ${{ github.workspace }}/patched_signed.apk
+          tag_name: iceraven-2.26.0-patched
+          files: patched_signed.apk
