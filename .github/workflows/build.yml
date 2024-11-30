@@ -36,11 +36,3 @@ jobs:
       with:
         name: iceraven-signed
         path: iceraven-signed.apk
-         cd ${{ github.workspace }}
-          chmod +x ./build.sh
-          ./build.sh
-      - name: Publish release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ env.BUILD_VERSION }}
-          files: ${{ github.workspace }}/patched_signed.apk
