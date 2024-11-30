@@ -1,17 +1,20 @@
 #!/bin/bash
 set -e
 
-# Define the path to the aapt binary
-AAPT_PATH=$(which aapt)
-
 # Decompile APK
 apktool d iceraven.apk -o iceraven-decompiled
+
+# Rename the problematic directory
+mv iceraven-decompiled/res/navigation iceraven-decompiled/res/navigation_fixed
 
 # Navigate to the res/values-night directory and edit colors.xml
 cd iceraven-decompiled/res/values-night
 sed -i 's/<color name="fx_mobile_layer_color_1">.*/<color name="fx_mobile_layer_color_1">@color\/photonBlack<\/color>/g' colors.xml
 sed -i 's/<color name="fx_mobile_layer_color_2">.*/<color name="fx_mobile_layer_color_2">@color\/photonDarkGrey90<\/color>/g' colors.xml
 cd ../../..
+
+# Rename the directory back to its original name
+mv iceraven-decompiled/res/navigation_fixed iceraven-decompiled/res/navigation
 
 # Recompile the APK
 apktool b iceraven-decompiled -o iceraven-modified.apk
@@ -25,3 +28,4 @@ apksigner sign --ks keystore/my-release-key.jks --ks-key-alias "$KEYSTORE_ALIAS"
 
 # Clean up
 rm -rf keystore
+rm -rf iceraven-decompiled
