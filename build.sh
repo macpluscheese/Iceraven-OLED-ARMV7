@@ -1,9 +1,6 @@
 #!/bin/bash
 set -e
 
-# Fetch the latest Iceraven APK
-wget -q https://github.com/fork-maintainers/iceraven-browser/releases/download/iceraven-2.26.0/iceraven-2.26.0-browser-arm64-v8a-forkRelease.apk -O latest.apk
-
 # Download apktool
 wget -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.8.1.jar -O apktool.jar
 wget -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool
@@ -21,6 +18,11 @@ sed -i 's/<color name="fx_mobile_layer_color_2">.*/<color name="fx_mobile_layer_
 # Recompile the APK
 java -jar apktool.jar b patched -o patched.apk --use-aapt2
 
-# Align and clean up
+# Align the APK
 zipalign 4 patched.apk patched_signed.apk
+
+# Sign the APK
+apksigner sign --ks keystore.jks --ks-pass pass:"${KEYSTORE_PASSPHRASE}" patched_signed.apk
+
+# Clean up
 rm -rf patched patched.apk
