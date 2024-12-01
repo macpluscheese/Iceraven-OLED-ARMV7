@@ -5,8 +5,9 @@ on:
   schedule:
     - cron: '00 0 * * *'
 
-permissions:
-  releases: write  #  <--- Grant write access to releases
+permissions:  #  <--  Same level as 'on:' and 'jobs:'
+  releases: write
+
 
 jobs:
   build:
