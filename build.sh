@@ -1,28 +1,17 @@
 #!/bin/bash
-set -e
 
-# Download apktool
-wget -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.8.1.jar -O apktool.jar
-wget -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool
-chmod +x apktool*
+ICERAVEN_VERSION=$1
 
-# Clean up any previous builds
-rm -rf patched patched_signed.apk
-java -jar apktool.jar d -s latest.apk -o patched 
-rm -rf patched/META-INF
+apktool d -s iceraven.apk -o iceraven-patched
 
-# Modify colors.xml
-sed -i 's/<color name="fx_mobile_layer_color_1">.*/<color name="fx_mobile_layer_color_1">@color\/photonBlack<\/color>/g' patched/res/values-night/colors.xml
-sed -i 's/<color name="fx_mobile_layer_color_2">.*/<color name="fx_mobile_layer_color_2">@color\/photonDarkGrey90<\/color>/g' patched/res/values-night/colors.xml
+# Search for and replace color values in ALL values*/colors.xml files
+# This is a broader approach than targeting a specific file.
+sed -i 's/<color name="fx_mobile_layer_color_1">.*/<color name="fx_mobile_layer_color_1">@color\/photonBlack<\/color>/g' iceraven-patched/res/values*/colors.xml
+sed -i 's/<color name="fx_mobile_layer_color_2">.*/<color name="fx_mobile_layer_color_2">@color\/photonDarkGrey90<\/color>/g' iceraven-patched/res/values*/colors.xml
 
-# Recompile the APK
-java -jar apktool.jar b patched -o patched.apk --use-aapt2
 
-# Align the APK
-zipalign 4 patched.apk patched_signed.apk
+apktool b iceraven-patched -o iceraven-patched.apk --use-aapt2
 
-# Sign the APK
-./apksigner sign --ks keystore.jks --ks-pass pass:"${KEYSTORE_PASSPHRASE}" patched_signed.apk
+zipalign 4 iceraven-patched.apk iceraven-patched-signed.apk
 
-# Clean up
-rm -rf patched patched.apk
+rm -rf iceraven-patched iceraven-patched.apk
