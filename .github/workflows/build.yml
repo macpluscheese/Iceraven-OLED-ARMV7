@@ -33,3 +33,8 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
           apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} --key-pass pass:${{ secrets.KEY_PASSWORD }} iceraven-patched-signed.apk || { echo "Signing failed"; exit 1; }
+      - name: Release APK
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: iceraven-dark-${{ env.ICERAVEN_VERSION }}
+          files: iceraven-patched-signed.apk
