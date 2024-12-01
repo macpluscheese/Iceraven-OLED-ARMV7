@@ -1,3 +1,6 @@
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
 name: Build IceRaven Dark Theme
 
 on:
