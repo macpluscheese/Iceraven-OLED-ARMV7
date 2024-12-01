@@ -2,15 +2,13 @@ concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: true
 
-name: Build IceRaven Dark Theme
+name: Build IceRaven Dark Theme (Manual Release)
 
 on:
   workflow_dispatch:
   schedule:
     - cron: '00 0 * * *'
 
-permissions:
-  releases: write
 
 jobs:
   build:
@@ -39,8 +37,8 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
           apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} --key-pass pass:${{ secrets.KEY_PASSWORD }} iceraven-patched-signed.apk || { echo "Signing failed"; exit 1; }
-      - name: Release APK
-        uses: softprops/action-gh-release@v1
+      - name: Upload APK as Artifact
+        uses: actions/upload-artifact@v3
         with:
-          tag_name: iceraven-dark-${{ env.ICERAVEN_VERSION }}
-          files: iceraven-patched-signed.apk
+          name: iceraven-dark-apk  # Name of the artifact
+          path: iceraven-patched-signed.apk
