@@ -1,4 +1,4 @@
-name: Build and Modify APK
+name: Build IceRaven Dark Theme
 
 on:
   workflow_dispatch:
@@ -8,33 +8,27 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Install dependencies
+      - uses: actions/checkout@v3
+      - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y jq wget zipalign openjdk-11-jdk
-
-      - name: Check out repository code
-        uses: actions/checkout@v3
-
-      - name: Download Iceraven APK
-        run: wget -O latest.apk https://github.com/fork-maintainers/iceraven-browser/releases/download/iceraven-2.26.0/iceraven-2.26.0-browser-arm64-v8a-forkRelease.apk
-
-      - name: Download and extract apksigner
+          sudo apt install -y wget apktool zipalign apksigner jq
+      - name: Get IceRaven Version
         run: |
-          wget -O build-tools.zip https://dl.google.com/android/repository/build-tools_r33.0.2-linux.zip
-          unzip -d build-tools build-tools.zip
-
-      - name: Run build script and sign apk
+          ICERAVEN_VERSION="2.26.0" # Replace with desired version
+          echo "ICERAVEN_VERSION=$ICERAVEN_VERSION" >> $GITHUB_ENV
+      - name: Download IceRaven APK
         run: |
-          chmod +x ./build.sh
-          ./build.sh
+          wget -q "https://github.com/fork-maintainers/iceraven-browser/releases/download/iceraven-${{ env.ICERAVEN_VERSION }}/iceraven-${{ env.ICERAVEN_VERSION }}-browser-arm64-v8a-forkRelease.apk" -O iceraven.apk
+      - name: Run Build Script
+        run: bash build.sh ${{ env.ICERAVEN_VERSION }}
+      - name: Sign APK  # Important: Configure signing secrets
+        run: |
           echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
-          build-tools/android-13.0.0/build-tools/33.0.2/apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} patched_signed.apk
-      
-      - name: Publish release
+          apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} --key-pass pass:${{ secrets.KEY_PASSWORD }} iceraven-patched-signed.apk
+      - name: Release APK
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: 'iceraven-2.26.0'
-          files: patched_signed.apk
+          tag_name: iceraven-dark-${{ env.ICERAVEN_VERSION }}
+          files: iceraven-patched-signed.apk
