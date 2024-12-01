@@ -1,3 +1,4 @@
+
 name: Build IceRaven Dark Theme
 
 on:
@@ -13,7 +14,12 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y wget apktool zipalign apksigner jq
+          sudo apt install -y wget apktool zipalign apksigner jq openjdk-17-jdk
+      - name: Set JAVA_HOME
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
       - name: Get IceRaven Version
         run: |
           ICERAVEN_VERSION="2.26.0" # Replace with desired version
@@ -21,12 +27,13 @@ jobs:
       - name: Download IceRaven APK
         run: |
           wget -q "https://github.com/fork-maintainers/iceraven-browser/releases/download/iceraven-${{ env.ICERAVEN_VERSION }}/iceraven-${{ env.ICERAVEN_VERSION }}-browser-arm64-v8a-forkRelease.apk" -O iceraven.apk
+
       - name: Run Build Script
         run: bash build.sh ${{ env.ICERAVEN_VERSION }}
-      - name: Sign APK  # Important: Configure signing secrets
+      - name: Sign APK
         run: |
           echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
-          apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} --key-pass pass:${{ secrets.KEY_PASSWORD }} iceraven-patched-signed.apk
+          apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} --key-pass pass:${{ secrets.KEY_PASSWORD }} iceraven-patched-signed.apk || { echo "Signing failed"; exit 1; }
       - name: Release APK
         uses: softprops/action-gh-release@v1
         with:
