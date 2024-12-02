@@ -24,16 +24,16 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
       - name: Get Latest IceRaven ARM64 Release
-        id: get_release  # Make the output accessible
+        id: get_release
         run: |
           LATEST_RELEASE=$(jq -r '.assets[] | select(.name | contains("arm64") and contains("forkRelease.apk")) | .browser_download_url' < <(curl -s https://api.github.com/repos/fork-maintainers/iceraven-browser/releases/latest))
-          echo "LATEST_RELEASE=$LATEST_RELEASE" >> $GITHUB_OUTPUT # Use GITHUB_OUTPUT 
+          echo "LATEST_RELEASE=$LATEST_RELEASE" >> $GITHUB_OUTPUT
           echo "ICERAVEN_VERSION=$(echo $LATEST_RELEASE | sed -E 's/.*iceraven-(.*)-browser.*/\1/')" >> $GITHUB_OUTPUT
       - name: Download Latest APK
         run: |
           wget -q "${{ steps.get_release.outputs.LATEST_RELEASE }}" -O iceraven.apk
       - name: Run Build Script
-        run: bash build.sh 
+        run: bash build.sh
       - name: Sign APK
         run: |
           echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
@@ -43,19 +43,18 @@ jobs:
         with:
           name: iceraven-dark-apk
           path: iceraven-patched-signed.apk
-      - name: Create Release (if new version)
+      - name: Create Release (if new version) # This is the main change
         id: create_release
-        if: steps.get_release.outputs.ICERAVEN_VERSION != steps.latest_release.outputs.tag_name # Check if a new release has been created
+        if: steps.get_release.outputs.ICERAVEN_VERSION != steps.latest_release.outputs.tag_name
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.get_release.outputs.ICERAVEN_VERSION }}
-          files: iceraven-patched-signed.apk
-          
+          files: iceraven-patched-signed.apk          
       - name: Get latest release info
-        id: latest_release # Check if latest release already exists
-        if: steps.create_release.outcome == 'success' # Only run if a new release has just been created
+        id: latest_release
+        if: steps.create_release.outcome == 'success'
         uses: cardinalby/git-get-release-action@v1
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }} # I mistakenly added github token here, and also on release section, correct it. 
         with:
-          latest: true      
+          latest: true
