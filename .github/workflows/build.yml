@@ -1,14 +1,13 @@
+name: Build IceRaven Dark Theme (Auto-Release)
+
+on:
+  schedule:
+    - cron: '00 0 * * *'  # Run daily at midnight
+  workflow_dispatch:       # Allow manual triggering
+
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: true
-
-name: Build IceRaven Dark Theme (Manual Release)
-
-on:
-  workflow_dispatch:
-  schedule:
-    - cron: '00 0 * * *'
-
 
 jobs:
   build:
@@ -24,21 +23,39 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-      - name: Get IceRaven Version
+      - name: Get Latest IceRaven ARM64 Release
+        id: get_release  # Make the output accessible
         run: |
-          ICERAVEN_VERSION="2.26.0" # Replace with desired version
-          echo "ICERAVEN_VERSION=$ICERAVEN_VERSION" >> $GITHUB_ENV
-      - name: Download IceRaven APK
+          LATEST_RELEASE=$(jq -r '.assets[] | select(.name | contains("arm64") and contains("forkRelease.apk")) | .browser_download_url' < <(curl -s https://api.github.com/repos/fork-maintainers/iceraven-browser/releases/latest))
+          echo "LATEST_RELEASE=$LATEST_RELEASE" >> $GITHUB_OUTPUT # Use GITHUB_OUTPUT 
+          echo "ICERAVEN_VERSION=$(echo $LATEST_RELEASE | sed -E 's/.*iceraven-(.*)-browser.*/\1/')" >> $GITHUB_OUTPUT
+      - name: Download Latest APK
         run: |
-          wget -q "https://github.com/fork-maintainers/iceraven-browser/releases/download/iceraven-${{ env.ICERAVEN_VERSION }}/iceraven-${{ env.ICERAVEN_VERSION }}-browser-arm64-v8a-forkRelease.apk" -O iceraven.apk
+          wget -q "${{ steps.get_release.outputs.LATEST_RELEASE }}" -O iceraven.apk
       - name: Run Build Script
-        run: bash build.sh ${{ env.ICERAVEN_VERSION }} || { echo "Build script failed"; exit 1; }
+        run: bash build.sh 
       - name: Sign APK
         run: |
           echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
-          apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} --key-pass pass:${{ secrets.KEY_PASSWORD }} iceraven-patched-signed.apk || { echo "Signing failed"; exit 1; }
+          apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} --key-pass pass:${{ secrets.KEY_PASSWORD }} iceraven-patched-signed.apk
       - name: Upload APK as Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: iceraven-dark-apk  # Name of the artifact
+          name: iceraven-dark-apk
           path: iceraven-patched-signed.apk
+      - name: Create Release (if new version)
+        id: create_release
+        if: steps.get_release.outputs.ICERAVEN_VERSION != steps.latest_release.outputs.tag_name # Check if a new release has been created
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_release.outputs.ICERAVEN_VERSION }}
+          files: iceraven-patched-signed.apk
+          
+      - name: Get latest release info
+        id: latest_release # Check if latest release already exists
+        if: steps.create_release.outcome == 'success' # Only run if a new release has just been created
+        uses: cardinalby/git-get-release-action@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          latest: true      
