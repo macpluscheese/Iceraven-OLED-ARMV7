@@ -1,9 +1,9 @@
 name: Build IceRaven Dark Theme (Auto-Release)
 
 on:
-  schedule:
-    - cron: '00 0 * * *'
   workflow_dispatch:
+  release:
+    types: [created]
 
 concurrency:
   group: ${{ github.workflow }}
@@ -12,26 +12,26 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: github.event_name == 'release'
     steps:
       - uses: actions/checkout@v3
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y wget apktool zipalign apksigner jq openjdk-17-jdk
+          sudo apt install -y wget apktool zipalign apksigner jq openjdk-17-jdk gh
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
-      - name: Get Latest IceRaven ARM64 Release
+      - name: Get Released APK URL and Version
         id: get_release
         run: |
-          LATEST_RELEASE=$(jq -r '.assets[] | select(.name | contains("arm64") and contains("forkRelease.apk")) | .browser_download_url' < <(curl -s https://api.github.com/repos/fork-maintainers/iceraven-browser/releases/latest))
-          echo "LATEST_RELEASE=$LATEST_RELEASE" >> $GITHUB_OUTPUT
-          echo "ICERAVEN_VERSION=$(echo $LATEST_RELEASE | sed -E 's/.*iceraven-(.*)-browser.*/\1/')" >> $GITHUB_OUTPUT
+          ASSET_URL=$(gh release download ${{ github.event.release.tag_name }} -R fork-maintainers/iceraven-browser --pattern *arm64*forkRelease.apk | cut -f 1 -d ' ')
+          echo "LATEST_RELEASE=$ASSET_URL" >> $GITHUB_OUTPUT
+          echo "ICERAVEN_VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
       - name: Download Latest APK
-        run: |
-          wget -q "${{ steps.get_release.outputs.LATEST_RELEASE }}" -O iceraven.apk
+        run: wget -q "${{ steps.get_release.outputs.LATEST_RELEASE }}" -O iceraven.apk
       - name: Run Build Script
         run: bash build.sh
       - name: Sign APK
@@ -45,18 +45,17 @@ jobs:
           path: iceraven-patched-signed.apk
       - name: Create Release (if new version)
         id: create_release
-        if: steps.get_release.outputs.ICERAVEN_VERSION != steps.latest_release.outputs.tag_name
         uses: softprops/action-gh-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}  # Use the PAT secret
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # Or ${{ github.token }} if in the original repo
         with:
-          tag_name: ${{ steps.get_release.outputs.ICERAVEN_VERSION }}
+          tag_name: iceraven-dark-${{ steps.get_release.outputs.ICERAVEN_VERSION }}
           files: iceraven-patched-signed.apk
-      - name: Get latest release info
+      - name: Get latest release info  # Optional: Get info about the newly created release
         id: latest_release
         if: steps.create_release.outcome == 'success'
         uses: cardinalby/git-get-release-action@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # Or ${{ github.token }} if in the original repo
         with:
           latest: true
