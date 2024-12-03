@@ -1,9 +1,9 @@
 name: Build IceRaven Dark Theme (Auto-Release)
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:    # Allows manual triggering
   release:
-    types: [created]
+    types: [created]  # Triggers on new IceRaven releases
 
 concurrency:
   group: ${{ github.workflow }}
@@ -12,8 +12,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
-    steps:
+    steps:  # Removed the conditional 'if' for manual runs
       - uses: actions/checkout@v3
       - name: Install Dependencies
         run: |
@@ -26,10 +25,20 @@ jobs:
           java-version: '17'
       - name: Get Released APK URL and Version
         id: get_release
+        # Use a conditional to get the release information based on the event
         run: |
-          ASSET_URL=$(gh release download ${{ github.event.release.tag_name }} -R fork-maintainers/iceraven-browser --pattern *arm64*forkRelease.apk | cut -f 1 -d ' ')
+          if [[ github.event_name == 'release' ]]; then # Automation
+              ASSET_URL=$(gh release download ${{ github.event.release.tag_name }} -R fork-maintainers/iceraven-browser --pattern *arm64*forkRelease.apk | cut -f 1 -d ' ')
+              echo "ICERAVEN_VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+
+          elif [[ github.event_name == 'workflow_dispatch' ]]; then # Manual
+              ICERAVEN_VERSION="2.26.0" # Or input from workflow_dispatch
+              ASSET_URL="https://github.com/fork-maintainers/iceraven-browser/releases/download/iceraven-$ICERAVEN_VERSION/iceraven-$ICERAVEN_VERSION-browser-arm64-v8a-forkRelease.apk" # Construct the URL
+              echo "ICERAVEN_VERSION=$ICERAVEN_VERSION" >> $GITHUB_OUTPUT
+          fi
           echo "LATEST_RELEASE=$ASSET_URL" >> $GITHUB_OUTPUT
-          echo "ICERAVEN_VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+
+
       - name: Download Latest APK
         run: wget -q "${{ steps.get_release.outputs.LATEST_RELEASE }}" -O iceraven.apk
       - name: Run Build Script
@@ -45,17 +54,18 @@ jobs:
           path: iceraven-patched-signed.apk
       - name: Create Release (if new version)
         id: create_release
+        if: github.event_name == 'release'  # Only create a release automatically for new upstream releases
         uses: softprops/action-gh-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # Or ${{ github.token }} if in the original repo
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # Or ${{ github.token }} if in original repo
         with:
           tag_name: iceraven-dark-${{ steps.get_release.outputs.ICERAVEN_VERSION }}
           files: iceraven-patched-signed.apk
-      - name: Get latest release info  # Optional: Get info about the newly created release
+      - name: Get latest release info
         id: latest_release
-        if: steps.create_release.outcome == 'success'
+        if: steps.create_release.outcome == 'success' # Get the latest release info if a release is successfully created
         uses: cardinalby/git-get-release-action@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # Or ${{ github.token }} if in the original repo
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # Or ${{ github.token }} if in original repo
         with:
           latest: true
