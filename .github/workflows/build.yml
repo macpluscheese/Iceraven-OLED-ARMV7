@@ -30,35 +30,35 @@ jobs:
       - name: Get IceRaven Release Info
         id: get_release
         run: |
-          if [[ github.event_name == 'release' ]]; then  # New Release
-            LATEST_RELEASE=$(jq -r '.assets[] | select(.name | contains("arm64") and contains("forkRelease.apk")) | .browser_download_url' < <(gh release view ${{ github.event.release.tag_name }} -R fork-maintainers/iceraven-browser --json assets))
+          if [[ github.event_name == 'release' ]]; then
+            LATEST_RELEASE=$(jq -r '.assets[] | select(.name | contains("arm64") and contains("forkRelease.apk")) | .browser_download_url' < <(gh release view "${{ github.event.release.tag_name }}" -R fork-maintainers/iceraven-browser --json assets))
             echo "ICERAVEN_VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
-          elif [[ github.event_name == 'workflow_dispatch' ]]; then # Manual Trigger
-            LATEST_RELEASE=$(jq -r '.assets[] | select(.name | contains("arm64") and contains("forkRelease.apk")) | .browser_download_url' < <(curl -s https://api.github.com/repos/fork-maintainers/iceraven-browser/releases/latest))
-            ICERAVEN_VERSION=$(echo "$LATEST_RELEASE" | sed -E 's/.*iceraven-(.*)-browser.*/\1/') # Extract version correctly
+          elif [[ github.event_name == 'workflow_dispatch' ]]; then
+            LATEST_RELEASE=$(jq -r '.assets[] | select(.name | contains("arm64") and contains("forkRelease.apk")) | .browser_download_url' < <(curl -s "https://api.github.com/repos/fork-maintainers/iceraven-browser/releases/latest"))
+            ICERAVEN_VERSION=$(echo "$LATEST_RELEASE" | sed -E 's/.*iceraven-(.*)-browser.*/\1/')
             echo "ICERAVEN_VERSION=$ICERAVEN_VERSION" >> $GITHUB_OUTPUT
-            echo "Latest Release (Manual): $LATEST_RELEASE" # Debugging output
+            echo "Latest Release (Manual): $LATEST_RELEASE"
           else # Scheduled run, check for update
-            LATEST_RELEASE=$(jq -r '.assets[] | select(.name | contains("arm64") and contains("forkRelease.apk")) | .browser_download_url' < <(curl -s https://api.github.com/repos/fork-maintainers/iceraven-browser/releases/latest))
-            CURRENT_VERSION=$(jq -r '.tag_name' < <(curl -s https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest))
-            ICERAVEN_VERSION=$(echo "$LATEST_RELEASE" | sed -E 's/.*iceraven-(.*)-browser.*/\1/') # Extract version correctly
+            LATEST_RELEASE=$(jq -r '.assets[] | select(.name | contains("arm64") and contains("forkRelease.apk")) | .browser_download_url' < <(curl -s "https://api.github.com/repos/fork-maintainers/iceraven-browser/releases/latest"))
+            CURRENT_VERSION=$(jq -r '.tag_name' < <(curl -s "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest"))
+            ICERAVEN_VERSION=$(echo "$LATEST_RELEASE" | sed -E 's/.*iceraven-(.*)-browser.*/\1/')
             echo "ICERAVEN_VERSION=$ICERAVEN_VERSION" >> $GITHUB_OUTPUT
             if [[ "$ICERAVEN_VERSION" == "$CURRENT_VERSION" ]]; then
               echo "No new IceRaven release found. Skipping."
               exit 0
             fi
           fi
-          echo "LATEST_RELEASE=$LATEST_RELEASE" >> $GITHUB_OUTPUT # Output the variable
+          echo "LATEST_RELEASE=${LATEST_RELEASE}" >> $GITHUB_OUTPUT # Properly quoted
 
       - name: Download Latest APK
-        run: wget -q "${{ steps.get_release.outputs.LATEST_RELEASE }}" -O iceraven.apk # Download the APK using the correct variable
-
+        run: |
+          wget -q "${{ steps.get_release.outputs.LATEST_RELEASE }}" -O iceraven.apk
       - name: Run Build Script
-        run: bash build.sh ${{ steps.get_release.outputs.LATEST_RELEASE }}
+        run: bash build.sh "${{ steps.get_release.outputs.LATEST_RELEASE }}"
       - name: Sign APK
         run: |
           echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
-          apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} --key-pass pass:${{ secrets.KEY_PASSWORD }} iceraven-patched-signed.apk
+          apksigner sign --ks keystore.jks --ks-pass "pass:${{ secrets.KEYSTORE_PASSPHRASE }}" --key-pass "pass:${{ secrets.KEY_PASSWORD }}" iceraven-patched-signed.apk
       - name: Upload APK as Artifact
         uses: actions/upload-artifact@v3
         with:
