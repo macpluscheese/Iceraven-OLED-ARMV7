@@ -38,13 +38,9 @@ java -jar "$APKTOOL_JAR" d -s "$ICERAVEN_APK" -o "$PATCHED_APK_DIR"
 
 echo "Patching colors.xml..."
 
-# 1. Back up the original colors.xml
-cp "$PATCHED_APK_DIR/res/values-night/colors.xml" "$PATCHED_APK_DIR/res/values-night/colors.xml.bak"
-
-# 2. Carefully modify colors.xml using a more robust method (sed with backup)
-# Target values-night for dark mode colors
-sed -i.bak -E 's|<color name="fx_mobile_layer_color_1">(#.{6,8})</color>|<color name="fx_mobile_layer_color_1">@color/photonBlack</color>|g' "$PATCHED_APK_DIR/res/values-night/colors.xml"
-sed -i.bak -E 's|<color name="fx_mobile_layer_color_2">(#.{6,8})</color>|<color name="fx_mobile_layer_color_2">@color/photonDarkGrey90</color>|g' "$PATCHED_APK_DIR/res/values-night/colors.xml"
+# Modify colors.xml directly, targeting values-night for dark mode colors
+sed -i -E 's|<color name="fx_mobile_layer_color_1">(#.{6,8})</color>|<color name="fx_mobile_layer_color_1">@color/photonBlack</color>|g' "$PATCHED_APK_DIR/res/values-night/colors.xml"
+sed -i -E 's|<color name="fx_mobile_layer_color_2">(#.{6,8})</color>|<color name="fx_mobile_layer_color_2">@color/photonDarkGrey90</color>|g' "$PATCHED_APK_DIR/res/values-night/colors.xml"
 
 # --- Rebuild APK ---
 
