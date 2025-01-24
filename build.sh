@@ -3,7 +3,7 @@
 set -e
 
 # --- Configuration ---
-APKTOOL_VERSION="2.9.3"
+APKTOOL_VERSION="2.9.3"  # Use the latest version
 APKTOOL_JAR="apktool_${APKTOOL_VERSION}.jar"
 ICERAVEN_APK="iceraven.apk"
 PATCHED_APK_DIR="iceraven-patched"
@@ -38,75 +38,13 @@ java -jar "$APKTOOL_JAR" d -s "$ICERAVEN_APK" -o "$PATCHED_APK_DIR"
 
 echo "Patching colors.xml..."
 
-# 1. Manually back up the original colors.xml
-cp "$PATCHED_APK_DIR/res/values/colors.xml" "$PATCHED_APK_DIR/res/values/colors.xml.bak"
+# 1. Back up the original colors.xml
+cp "$PATCHED_APK_DIR/res/values-night/colors.xml" "$PATCHED_APK_DIR/res/values-night/colors.xml.bak"
 
 # 2. Carefully modify colors.xml using a more robust method (sed with backup)
-sed -i.bak -E 's|<color name="fx_mobile_layer_color_1">(#.{6,8})</color>|<color name="fx_mobile_layer_color_1">@color/photonBlack</color>|g' "$PATCHED_APK_DIR/res/values/colors.xml"
-sed -i.bak -E 's|<color name="fx_mobile_layer_color_2">(#.{6,8})</color>|<color name="fx_mobile_layer_color_2">@color/photonDarkGrey90</color>|g' "$PATCHED_APK_DIR/res/values/colors.xml"
-
-# --- Find and Modify Main Activity Layout ---
-
-echo "Modifying layout to fix status bar overlap..."
-
-# More robust method to find the main activity layout file:
-
-# 1. Find the main activity in AndroidManifest.xml
-MAIN_ACTIVITY_NAME=$(sed -n '/<activity/,/<\/activity>/ {
-  /<intent-filter>/,/<\/intent-filter>/ {
-    /<action android:name="android.intent.action.MAIN"/ {
-      s/.*<activity \(.*\)android:name="\(.*\)".*/\2/p
-    }
-  }
-}' "$PATCHED_APK_DIR/AndroidManifest.xml")
-
-if [ -z "$MAIN_ACTIVITY_NAME" ]; then
-  echo "Error: Could not find main activity in AndroidManifest.xml."
-  exit 1
-fi
-
-# 2. Convert the activity name to a potential layout file name (activity_main.xml)
-LAYOUT_FILE_NAME="activity_$(echo "$MAIN_ACTIVITY_NAME" | tr '.' '_' | tr '[:upper:]' '[:lower:]').xml"
-
-# 3. Find the layout file in the res/layout directory
-MAIN_ACTIVITY_LAYOUT=$(find "$PATCHED_APK_DIR/res/layout" -name "$LAYOUT_FILE_NAME" -print -quit)
-
-if [ -z "$MAIN_ACTIVITY_LAYOUT" ]; then
-  echo "Error: Could not find the main activity layout file: $LAYOUT_FILE_NAME"
-  echo "You may need to manually specify the layout file name in build.sh"
-  exit 1
-fi
-
-echo "Found main activity layout file: $MAIN_ACTIVITY_LAYOUT"
-
-# 1. Ensure the root layout has fitsSystemWindows="true"
-if ! grep -q "android:fitsSystemWindows=\"true\"" "$MAIN_ACTIVITY_LAYOUT"; then
-  echo "Adding android:fitsSystemWindows=\"true\" to root layout"
-  sed -i '/<.*Layout/s/$/\    android:fitsSystemWindows="true"/' "$MAIN_ACTIVITY_LAYOUT"
-fi
-
-# 2. Add a top padding to the main content container to account for the status bar height.
-#    We'll use a dimension resource for this to handle different screen densities.
-
-# Create dimens.xml if it doesn't exist
-DIMENS_FILE="$PATCHED_APK_DIR/res/values/dimens.xml"
-if [ ! -f "$DIMENS_FILE" ]; then
-    echo "<resources>" > "$DIMENS_FILE"
-    echo "    <dimen name=\"status_bar_height\">24dp</dimen>" >> "$DIMENS_FILE" # Add this line
-    echo "</resources>" >> "$DIMENS_FILE"
-else
-    # Add the dimension if it doesn't exist
-    if ! grep -q "status_bar_height" "$DIMENS_FILE"; then
-        sed -i '/<\/resources>/i\    <dimen name="status_bar_height\">24dp</dimen>' "$DIMENS_FILE"
-    fi
-fi
-
-# Add the padding to the main content view (replace 'main_content' with the actual ID)
-if grep -q "android:id=\"@\+id\/main_content\"" "$MAIN_ACTIVITY_LAYOUT"; then
-    sed -i '/android:id="@\+id\/main_content"/s/$/\    android:paddingTop="@dimen\/status_bar_height"/' "$MAIN_ACTIVITY_LAYOUT"
-else
-    echo "Warning: Could not find main content view with ID 'main_content'. Padding not added."
-fi
+# Target values-night for dark mode colors
+sed -i.bak -E 's|<color name="fx_mobile_layer_color_1">(#.{6,8})</color>|<color name="fx_mobile_layer_color_1">@color/photonBlack</color>|g' "$PATCHED_APK_DIR/res/values-night/colors.xml"
+sed -i.bak -E 's|<color name="fx_mobile_layer_color_2">(#.{6,8})</color>|<color name="fx_mobile_layer_color_2">@color/photonDarkGrey90</color>|g' "$PATCHED_APK_DIR/res/values-night/colors.xml"
 
 # --- Rebuild APK ---
 
