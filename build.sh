@@ -45,17 +45,33 @@ cp "$PATCHED_APK_DIR/res/values/colors.xml" "$PATCHED_APK_DIR/res/values/colors.
 sed -i.bak -E 's|<color name="fx_mobile_layer_color_1">(#.{6,8})</color>|<color name="fx_mobile_layer_color_1">@color/photonBlack</color>|g' "$PATCHED_APK_DIR/res/values/colors.xml"
 sed -i.bak -E 's|<color name="fx_mobile_layer_color_2">(#.{6,8})</color>|<color name="fx_mobile_layer_color_2">@color/photonDarkGrey90</color>|g' "$PATCHED_APK_DIR/res/values/colors.xml"
 
-# --- Modify Layout to Address Overlap Issue ---
+# --- Find and Modify Main Activity Layout ---
 
 echo "Modifying layout to fix status bar overlap..."
 
-# Find the main activity layout file (replace with the actual file if different)
-MAIN_ACTIVITY_LAYOUT=$(find "$PATCHED_APK_DIR/res/layout" -name "browser.xml" -print -quit)  # Changed
-
-if [ -z "$MAIN_ACTIVITY_LAYOUT" ]; then
-  echo "Error: Could not find the main activity layout file (browser.xml)."
+# Find the main activity layout file dynamically
+# Use aapt to get the main activity name
+MAIN_ACTIVITY=$(aapt dump badging "$ICERAVEN_APK" | awk '/application-label:/ {print $2}' | sed "s/'//g")
+if [ -z "$MAIN_ACTIVITY" ]; then
+  echo "Error: Could not determine main activity name from APK."
   exit 1
 fi
+
+# Use the activity name to construct a likely layout file name pattern
+# This example uses a common pattern; adjust if Iceraven uses a different convention
+LAYOUT_FILE_PATTERN="activity_$(echo "$MAIN_ACTIVITY" | tr '.' '_' | tr '[:upper:]' '[:lower:]').xml"
+
+# Find the layout file
+MAIN_ACTIVITY_LAYOUT=$(find "$PATCHED_APK_DIR/res/layout" -name "$LAYOUT_FILE_PATTERN" -print -quit)
+
+# Check if the layout file was found
+if [ -z "$MAIN_ACTIVITY_LAYOUT" ]; then
+  echo "Error: Could not find the main activity layout file using pattern: $LAYOUT_FILE_PATTERN"
+  echo "You may need to manually specify the correct layout file in build.sh"
+  exit 1
+fi
+
+echo "Found main activity layout file: $MAIN_ACTIVITY_LAYOUT"
 
 # 1. Ensure the root layout has fitsSystemWindows="true"
 if ! grep -q "android:fitsSystemWindows=\"true\"" "$MAIN_ACTIVITY_LAYOUT"; then
