@@ -34,13 +34,13 @@ download_if_not_exists "https://github.com/iBotPeaches/Apktool/releases/download
 echo "Decompiling $ICERAVEN_APK..."
 java -jar "$APKTOOL_JAR" d -s "$ICERAVEN_APK" -o "$PATCHED_APK_DIR"
 
-# --- Modify colors.xml (Refined Patching) ---
+# --- Modify colors.xml (Using IronFox color lines) ---
 
 echo "Patching colors.xml..."
 
-# Modify colors.xml directly, targeting values-night for dark mode colors
-sed -i -E 's|<color name="fx_mobile_layer_color_1">(#.{6,8})</color>|<color name="fx_mobile_layer_color_1">@color/photonBlack</color>|g' "$PATCHED_APK_DIR/res/values-night/colors.xml"
-sed -i -E 's|<color name="fx_mobile_layer_color_2">(#.{6,8})</color>|<color name="fx_mobile_layer_color_2">@color/photonDarkGrey90</color>|g' "$PATCHED_APK_DIR/res/values-night/colors.xml"
+# Replace the color values in values-night/colors.xml with IronFox's values
+sed -i 's/name="fx_mobile_layer_color_1" type="color">#ff2d2e34<\/item>/name="fx_mobile_layer_color_1" type="color">@color\/photonBlack<\/item>/g' "$PATCHED_APK_DIR/res/values-night/colors.xml"
+sed -i 's/name="fx_mobile_layer_color_2" type="color">#ff35373f<\/item>/name="fx_mobile_layer_color_2" type="color">@color\/photonDarkGrey90<\/item>/g' "$PATCHED_APK_DIR/res/values-night/colors.xml"
 
 # --- Rebuild APK ---
 
