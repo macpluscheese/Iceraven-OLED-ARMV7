@@ -49,25 +49,31 @@ sed -i.bak -E 's|<color name="fx_mobile_layer_color_2">(#.{6,8})</color>|<color 
 
 echo "Modifying layout to fix status bar overlap..."
 
-# Find the main activity layout file dynamically
-# Use aapt to get the main activity name
-MAIN_ACTIVITY=$(aapt dump badging "$ICERAVEN_APK" | awk '/application-label:/ {print $2}' | sed "s/'//g")
-if [ -z "$MAIN_ACTIVITY" ]; then
-  echo "Error: Could not determine main activity name from APK."
+# More robust method to find the main activity layout file:
+
+# 1. Find the main activity in AndroidManifest.xml
+MAIN_ACTIVITY_NAME=$(sed -n '/<activity/,/<\/activity>/ {
+  /<intent-filter>/,/<\/intent-filter>/ {
+    /<action android:name="android.intent.action.MAIN"/ {
+      s/.*<activity \(.*\)android:name="\(.*\)".*/\2/p
+    }
+  }
+}' "$PATCHED_APK_DIR/AndroidManifest.xml")
+
+if [ -z "$MAIN_ACTIVITY_NAME" ]; then
+  echo "Error: Could not find main activity in AndroidManifest.xml."
   exit 1
 fi
 
-# Use the activity name to construct a likely layout file name pattern
-# This example uses a common pattern; adjust if Iceraven uses a different convention
-LAYOUT_FILE_PATTERN="activity_$(echo "$MAIN_ACTIVITY" | tr '.' '_' | tr '[:upper:]' '[:lower:]').xml"
+# 2. Convert the activity name to a potential layout file name (activity_main.xml)
+LAYOUT_FILE_NAME="activity_$(echo "$MAIN_ACTIVITY_NAME" | tr '.' '_' | tr '[:upper:]' '[:lower:]').xml"
 
-# Find the layout file
-MAIN_ACTIVITY_LAYOUT=$(find "$PATCHED_APK_DIR/res/layout" -name "$LAYOUT_FILE_PATTERN" -print -quit)
+# 3. Find the layout file in the res/layout directory
+MAIN_ACTIVITY_LAYOUT=$(find "$PATCHED_APK_DIR/res/layout" -name "$LAYOUT_FILE_NAME" -print -quit)
 
-# Check if the layout file was found
 if [ -z "$MAIN_ACTIVITY_LAYOUT" ]; then
-  echo "Error: Could not find the main activity layout file using pattern: $LAYOUT_FILE_PATTERN"
-  echo "You may need to manually specify the correct layout file in build.sh"
+  echo "Error: Could not find the main activity layout file: $LAYOUT_FILE_NAME"
+  echo "You may need to manually specify the layout file name in build.sh"
   exit 1
 fi
 
