@@ -3,7 +3,7 @@ set -e
 
 # --- Configuration ---
 APKTOOL_VERSION="2.9.3"
-STATUS_BAR_HEIGHT="48dp"  # Tested value for Pixel Fold
+STATUS_BAR_HEIGHT="48dp"
 
 # --- Cleanup previous builds ---
 rm -rf iceraven-patched apktool.jar
@@ -24,13 +24,22 @@ find iceraven-patched/res/values* -name 'colors.xml' -exec sed -i \
   -e 's/<color name="fx_mobile_layer_color_2">.*/<color name="fx_mobile_layer_color_2">@color\/photonDarkGrey90<\/color>/g' \
   {} +
 
-# Smali Color Values
+# Smali Color Values (robust implementation)
 echo "Modifying PhotonColors.smali..."
-find iceraven-patched/smali_classes2/mozilla/components/ui/colors -name 'PhotonColors.smali' -exec sed -i \
-  -e 's/ff2b2a33/ff000000/g' \
-  -e 's/ff42414d/ff15141a/g' \
-  -e 's/ff52525e/ff15141a/g' \
-  {} +
+SMALI_PATHS=$(find iceraven-patched/smali_classes* -path '*/mozilla/components/ui/colors/PhotonColors.smali')
+
+if [ -z "$SMALI_PATHS" ]; then
+  echo "Error: PhotonColors.smali not found in any smali_classes directory!"
+  exit 1
+fi
+
+while IFS= read -r smali_file; do
+  sed -i \
+    -e 's/ff2b2a33/ff000000/g' \
+    -e 's/ff42414d/ff15141a/g' \
+    -e 's/ff52525e/ff15141a/g' \
+    "$smali_file"
+done <<< "$SMALI_PATHS"
 
 # --- Fix Pixel Status Bar Padding ---
 echo "Adjusting status bar dimensions..."
