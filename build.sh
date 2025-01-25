@@ -1,9 +1,12 @@
 #!/bin/bash
 set -e
-# Download latest Apktool
-APKTOOL_URL=$(curl -s https://api.github.com/repos/iBotPeaches/apktool/releases/latest | grep -o "https://.*apktool_[0-9.]*\.jar")
-wget -q "$APKTOOL_URL" -O apktool.jar
 
+# Download Apktool and script
+wget -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.11.0.jar -O apktool.jar
+wget -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool
+chmod +x apktool*
+
+# Decompile APK
 java -jar apktool.jar d -s iceraven.apk -o iceraven-patched
 
 # Color patching
@@ -21,6 +24,7 @@ for dir in "${SMALI_DIRS[@]}"; do
  fi
 done
 
+# Rebuild APK
 java -jar apktool.jar b iceraven-patched -o iceraven-patched.apk --use-aapt2
 zipalign 4 iceraven-patched.apk iceraven-patched-signed.apk
 rm -rf iceraven-patched iceraven-patched.apk
