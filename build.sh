@@ -7,6 +7,9 @@ wget -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.11.0.jar -
 wget -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool
 chmod +x apktool*
 
+# Download latest Iceraven APK
+wget -q https://download.mozilla.org/?product=fenix-latest&os=android&lang=en-US -O iceraven.apk
+
 # Decompile the APK
 ./apktool d -s iceraven.apk -o iceraven-patched
 
@@ -19,10 +22,13 @@ sed -i 's/<color name="fx_mobile_layer_color_2">.*/<color name="fx_mobile_layer_
 
 # Decompile the APK using JADX
 wget -q https://github.com/skylot/jadx/releases/download/v1.4.7/jadx-1.4.7.zip -O jadx.zip
-unzip jadx.zip
+
+# Use the -o option with unzip to overwrite files without prompting
+unzip -o jadx.zip 
+
 rm jadx.zip
 
-./jadx/bin/jadx -d iceraven-patched "$photon_path"
+./jadx/bin/jadx -d iceraven-patched iceraven.apk
 
 # Find and patch PhotonColors.smali
 photon_path=$(find iceraven-patched -name PhotonColors.smali)
