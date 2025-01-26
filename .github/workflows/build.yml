@@ -35,6 +35,60 @@ jobs:
         with:
           distribution: 'microsoft'
 name: 🦊 Iceraven OLED Builder
+name: 🦊 Iceraven OLED Builder
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Daily UTC midnight
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-release:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: 🛠️ Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📦 Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: 🚀 Fetch latest ARM64 APK
+        id: fetch-apk
+        run: |
+          LATEST_TAG=$(curl -s https://api.github.com/repos/fork-maintainers/iceraven-browser/releases/latest | jq -r '.tag_name')
+          echo "version=$LATEST_TAG" >> $GITHUB_OUTPUT
+          wget -q "https://github.com/fork-maintainers/iceraven-browser/releases/download/$LATEST_TAG/iceraven-$LATEST_TAG-arm64-v8a-forkRelease.apk" -O iceraven.apk
+
+      - name: 🔐 Prepare signing environment
+        run: |
+          echo "${{ secrets.KEYSTORE }}" | base64 -d > keystore.jks
+          echo "KEYSTORE=keystore.jks" >> $GITHUB_ENV
+          echo "KEYSTORE_PASS=${{ secrets.KEYSTORE_PASS }}" >> $GITHUB_ENV
+
+      - name: 🛠️ Execute build script
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: 🚢 Create GitHub release
+        if: ${{ success() }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.fetch-apk.outputs.version }}-oled
+          files: iceraven-oled.apk
+          generate_release_notes: true
+        env:  # FIXED INDENTATION HERE
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
   schedule:
@@ -73,32 +127,7 @@ jobs:
           echo "${{ secrets.KEYSTORE }}" | base64 -d > keystore.jks
           echo "KEYSTORE=keystore.jks" >> $GITHUB_ENV
           echo "KEYSTORE_PASS=${{ secrets.KEYSTORE_PASS }}" >> $GITHUB_ENV
-
-      - name: 🛠️ Execute build script
-        run: |
-          chmod +x build.sh
-          ./build.sh
-
-      - name: 🚢 Create GitHub release
-        uses: softprops/action-gh-release@v2
-        if: ${{ success() }}
-        with:
-          tag_name: ${{ steps.fetch-apk.outputs.version }}-oled
-          files: iceraven-oled.apk
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-ks" >> $GITHUB_ENV
-
-      - name: 🛠️ Run Build Script
-        run: chmod +x build.sh && ./build.sh
-
-      - name: 🚢 Create Release
-        uses: softprops/action-gh-release@v2
-        if: ${{ success() }}
-        with:
-          tag_name: ${{ steps.fetch-apk.outputs.version }}-oled
-          files: iceraven-oled.apk
+ iceraven-oled.apk
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
