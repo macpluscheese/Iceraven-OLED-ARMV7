@@ -2,11 +2,10 @@
 
 set -e
 
-# Explicitly use apktool.jar
-wget -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.8.1.jar -O apktool.jar  # Download latest version
-
-# Decompile the APK (without -s option)
-java -jar apktool.jar d iceraven.apk -o iceraven-patched
+# Decompile with Apktool (decode resources + classes)
+wget -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.11.0.jar -O apktool.jar
+java -jar apktool.jar d iceraven.apk -o iceraven-patched  # -s flag removed
+rm -rf iceraven-patched/META-INF
 
 # Color patching
 sed -i 's/<color name="fx_mobile_layer_color_1">.*/<color name="fx_mobile_layer_color_1">@color\/photonBlack<\/color>/g' iceraven-patched/res/values*/colors.xml
@@ -24,4 +23,4 @@ java -jar apktool.jar b iceraven-patched -o iceraven-patched.apk --use-aapt2
 zipalign 4 iceraven-patched.apk iceraven-patched-signed.apk
 
 # Clean up
-rm -rf iceraven-patched iceraven-patc hed.apk
+rm -rf iceraven-patched iceraven-patch ed.apk
