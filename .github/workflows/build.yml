@@ -1,8 +1,8 @@
-name: IceRaven OLED Auto-Release
+name: Build IceRaven Dark Theme (Auto-Release)
 
 on:
   schedule:
-    - cron: "00 0 * * *"
+    - cron: '00 0 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -10,74 +10,53 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check-update:
-    runs-on: ubuntu-latest
-    outputs:
-      new_version_available: ${{ steps.version_check.outputs.new_version }}
-      upstream_tag: ${{ steps.get_upstream.outputs.tag }}
-      apk_url: ${{ steps.get_upstream.outputs.apk_url }}
-    steps:
-      - name: Get upstream release info
-        id: get_upstream
-        run: |
-          response=$(curl -s "https://api.github.com/repos/fork-maintainers/iceraven-browser/releases/latest")
-          tag=$(jq -r '.tag_name' <<< "$response")
-          apk_url=$(jq -r '.assets[] | select(.name | test("arm64.*forkRelease.apk$")) | .browser_download_url' <<< "$response")
-          echo "tag=$tag" >> $GITHUB_OUTPUT
-          echo "apk_url=$apk_url" >> $GITHUB_OUTPUT
-
-      - name: Check existing releases
-        id: version_check
-        run: |
-          # Check if tag already exists in our repo
-          tag_exists=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/tags" \
-            | jq -r --arg tag "${{ steps.get_upstream.outputs.tag }}" \
-            'any(.[].name == $tag; .)')
-
-          # Set output based on tag existence
-          if [[ "$tag_exists" == "true" ]]; then
-            echo "new_version=false" >> $GITHUB_OUTPUT
-          else
-            echo "new_version=true" >> $GITHUB_OUTPUT
-          fi
-
   build:
-    needs: check-update
-    if: needs.check-update.outputs.new_version_available == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
-          sudo apt update && sudo apt install -y wget apktool zipalign apksigner jq openjdk-17-jdk
-
+          sudo apt update
+          sudo apt install -y wget apktool zipalign apksigner jq openjdk-17-jdk
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Download upstream APK
-        run: wget -q "${{ needs.check-update.outputs.apk_url }}" -O iceraven.apk
-
-      - name: Build and patch
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Get Latest IceRaven ARM64 Release
+        id: get_release
+        run: |
+          LATEST_RELEASE=$(jq -r '.assets[] | select(.name | contains("arm64") and contains("forkRelease.apk")) | .browser_download_url' < <(curl -s https://api.github.com/repos/fork-maintainers/iceraven-browser/releases/latest))
+          echo "LATEST_RELEASE=$LATEST_RELEASE" >> $GITHUB_OUTPUT
+          echo "ICERAVEN_VERSION=$(echo $LATEST_RELEASE | sed -E 's/.*iceraven-(.*)-browser.*/\1/')" >> $GITHUB_OUTPUT
+      - name: Download Latest APK
+        run: |
+          wget -q "${{ steps.get_release.outputs.LATEST_RELEASE }}" -O iceraven.apk
+      - name: Run Build Script
         run: bash build.sh
-
       - name: Sign APK
         run: |
           echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
-          apksigner sign \
-            --ks keystore.jks \
-            --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} \
-            --key-pass pass:${{ secrets.KEY_PASSWORD }} \
-            iceraven-patched-signed.apk
-
-      - name: Create release
-        uses: softprops/action-gh-release@v1
+          apksigner sign --ks keystore.jks --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} --key-pass pass:${{ secrets.KEY_PASSWORD }} iceraven-patched-signed.apk
+      - name: Upload APK as Artifact
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ${{ needs.check-update.outputs.upstream_tag }}
-          files: iceraven-patched-signed.apk
+          name: iceraven-dark-apk
+          path: iceraven-patched-signed.apk
+      - name: Create Release (if new version)
+        id: create_release
+        if: steps.get_release.outputs.ICERAVEN_VERSION != steps.latest_release.outputs.tag_name
+        uses: softprops/action-gh-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}  # Use the PAT secret
+        with:
+          tag_name: ${{ steps.get_release.outputs.ICERAVEN_VERSION }}
+          files: iceraven-patched-signed.apk
+      - name: Get latest release info
+        id: latest_release
+        if: steps.create_release.outcome == 'success'
+        uses: cardinalby/git-get-release-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        with:
+          latest: true
