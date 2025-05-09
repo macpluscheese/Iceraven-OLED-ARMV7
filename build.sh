@@ -12,10 +12,10 @@ sed -i 's/<color name="fx_mobile_layer_color_1">.*/<color name="fx_mobile_layer_
 sed -i 's/<color name="fx_mobile_layer_color_2">.*/<color name="fx_mobile_layer_color_2">@color\/photonDarkGrey90<\/color>/g' iceraven-patched/res/values-night/colors.xml
 
 # Smali patching
-sed -i 's/ff1c1b22/ff000000/g' patched/smali_classes3/mozilla/components/ui/colors/PhotonColors.smali
-sed -i 's/ff2b2a33/ff000000/g' patched/smali_classes3/mozilla/components/ui/colors/PhotonColors.smali
-sed -i 's/ff42414d/ff15141a/g' patched/smali_classes3/mozilla/components/ui/colors/PhotonColors.smali
-sed -i 's/ff52525e/ff15141a/g' patched/smali_classes3/mozilla/components/ui/colors/PhotonColors.smali
+sed -i 's/ff1c1b22/ff000000/g' iceraven-patched/smali_classes3/mozilla/components/ui/colors/PhotonColors.smali
+sed -i 's/ff2b2a33/ff000000/g' iceraven-patched/smali_classes3/mozilla/components/ui/colors/PhotonColors.smali
+sed -i 's/ff42414d/ff15141a/g' iceraven-patched/smali_classes3/mozilla/components/ui/colors/PhotonColors.smali
+sed -i 's/ff52525e/ff15141a/g' iceraven-patched/smali_classes3/mozilla/components/ui/colors/PhotonColors.smali
 
 # Recompile the APK
 java -jar apktool.jar b iceraven-patched -o iceraven-patched.apk --use-aapt2
