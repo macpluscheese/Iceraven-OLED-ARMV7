@@ -19,8 +19,8 @@ sed -i 's/eeeeee/e3e3e3/g' iceraven-patched/assets/extensions/readerview/readerv
 sed -i 's/ff1c1b22/ff000000/g' iceraven-patched/smali*/mozilla/components/ui/colors/PhotonColors.smali
 sed -i 's/ff2b2a33/ff000000/g' iceraven-patched/smali*/mozilla/components/ui/colors/PhotonColors.smali
 sed -i 's/ff42414d/ff15141a/g' iceraven-patched/smali*/mozilla/components/ui/colors/PhotonColors.smali
-sed -i 's/ff52525e/ff23212b/g' iceraven-patched/smali*/mozilla/components/ui/colors/PhotonColors.smali
-sed -i 's/ff5b5b66/ff2b2936/g' iceraven-patched/smali*/mozilla/components/ui/colors/PhotonColors.smali
+sed -i 's/ff52525e/ff25232e/g' iceraven-patched/smali*/mozilla/components/ui/colors/PhotonColors.smali
+sed -i 's/ff5b5b66/ff2d2b38/g' iceraven-patched/smali*/mozilla/components/ui/colors/PhotonColors.smali
 
 # Recompile the APK
 java -jar apktool.jar b iceraven-patched -o iceraven-patched.apk --use-aapt2
