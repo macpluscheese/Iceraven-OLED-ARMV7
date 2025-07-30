@@ -3,7 +3,7 @@
 set -e
 
 # Decompile with Apktool (decode resources + classes)
-wget -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.11.0.jar -O apktool.jar
+wget -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.12.0.jar -O apktool.jar
 java -jar apktool.jar d iceraven.apk -o iceraven-patched  # -s flag removed
 rm -rf iceraven-patched/META-INF
 
