@@ -20,7 +20,7 @@ jobs:
         id: this_repo_latest_release
         uses: cardinalby/git-get-release-action@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ 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 }}
         with:
           latest: true
           # Optional: You might want to specify a repository if it's not the current one,
